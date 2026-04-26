@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Art Across Time</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#000}
+body{font-family:'Press Start 2P',monospace;image-rendering:pixelated}
+button,input,textarea,select{font-family:'Press Start 2P',monospace}
+:root{--black:#0a0a0a;--white:#f0ede0;--gray:#888;--bg:#1a1a2e;--border:#4a4a8a;--gold:#e8d44d;--red:#e84545;--green:#4ec94e;--scanline:rgba(0,0,0,0.07)}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center}
+.screen.active{display:flex}
+.modal-ov{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.88)}
+.modal-ov.active{display:flex}
+.scanlines::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:999;background:repeating-linear-gradient(0deg,transparent,transparent 3px,var(--scanline) 3px,var(--scanline) 4px)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes popIn{0%{transform:scale(0.5);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+@keyframes slideUp{0%{transform:translateY(30px);opacity:0}100%{transform:translateY(0);opacity:1}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(232,212,77,0.6)}50%{box-shadow:0 0 0 10px rgba(232,212,77,0)}}
+@keyframes twinkle{0%,100%{opacity:0.2;transform:scale(0.8)}50%{opacity:1;transform:scale(1.2)}}
+@keyframes revealImg{0%{clip-path:inset(0 100% 0 0)}100%{clip-path:inset(0 0 0 0)}}
+.blink{animation:blink 1s step-end infinite}
+.float{animation:float 3s ease-in-out infinite}
+.pxbtn{display:inline-block;padding:10px 18px;background:var(--gold);color:var(--black);border:4px solid var(--black);box-shadow:4px 4px 0 var(--black);font-size:9px;cursor:pointer;transition:transform .1s,box-shadow .1s;user-select:none}
+.pxbtn:hover,.pxbtn:focus{transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--black);outline:none}
+.pxbtn:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--black)}
+.pxbtn:focus-visible{outline:3px solid cyan;outline-offset:3px}
+.pxbtn.red{background:var(--red);color:var(--white)}
+.pxbtn.grn{background:var(--green);color:var(--black)}
+.pxbtn.blu{background:#4a90e2;color:var(--white)}
+.pxbtn.gray{background:#555;color:var(--white)}
+.pxbtn.sm{padding:6px 12px;font-size:7px}
+.pxbtn.lg{padding:14px 26px;font-size:11px}
+.keybadge{display:inline-block;padding:2px 6px;background:#333;border:2px solid #555;border-bottom-color:#111;color:#bbb;font-size:5px;margin:0 1px}
+.kbbar{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding:8px 16px;background:rgba(0,0,0,0.5);border-top:2px solid #1a1a1a;flex-shrink:0}
+.khint{font-size:5px;color:#444;display:flex;align-items:center;gap:4px;white-space:nowrap}
+/* TITLE */
+#screen-title{background:radial-gradient(ellipse at 30% 50%,#2a1650 0%,#0a0a1a 70%);padding:20px}
+.tstars{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.tstar{position:absolute;width:4px;height:4px;background:#fff;animation:twinkle 2s ease-in-out infinite}
+/* MAP */
+#screen-map{background:radial-gradient(ellipse at center,#0d2035 0%,#080d14 80%);padding:16px;overflow:auto}
+.map-hdr{text-align:center;margin-bottom:16px}
+.map-ttl{font-size:clamp(10px,2vw,15px);color:var(--gold);margin-bottom:6px}
+.map-sub{font-size:6px;color:#5a8ab0;margin-bottom:4px;line-height:2}
+.map-prog{font-size:6px;color:var(--green)}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:880px;width:100%}
+.wcard{position:relative;padding:14px 10px;cursor:pointer;border:4px solid rgba(255,255,255,0.12);box-shadow:4px 4px 0 rgba(0,0,0,0.6);transition:transform .12s,box-shadow .12s;min-height:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.wcard:hover,.wcard.sel{transform:translate(-2px,-2px);box-shadow:6px 6px 0 rgba(0,0,0,.8)}
+.wcard.sel{border-color:var(--gold)!important;animation:pulse 1.5s infinite}
+.wcard:focus-visible{outline:3px solid cyan;outline-offset:3px}
+.wcard-em{font-size:28px;margin-bottom:6px;animation:float 3s ease-in-out infinite}
+.wcard-nm{font-size:7px;color:#eee;line-height:1.8;margin-bottom:6px;white-space:pre-line}
+.wcard-pr{font-size:5px;color:rgba(255,255,255,.45);margin-bottom:6px}
+.wcard-pg{font-size:5px;padding:3px 7px;border:2px solid rgba(255,255,255,.15);color:var(--green);background:rgba(0,0,0,.3)}
+.wf{background:linear-gradient(135deg,#3a1005,#7a3010)}
+.wp{background:linear-gradient(135deg,#121840,#263375)}
+.wd{background:linear-gradient(135deg,#08152a,#152e50)}
+.wj{background:linear-gradient(135deg,#3a0505,#9e2020)}
+.we{background:linear-gradient(135deg,#2a1800,#6a4800)}
+.wh{background:linear-gradient(135deg,#12041e,#38123a)}
+/* WORLD VIEW */
+#screen-world{padding:14px;overflow:auto}
+.world-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap}
+.world-nm{font-size:clamp(8px,1.5vw,12px);color:#eee;line-height:1.8}
+.world-pd{font-size:5px;color:var(--gray);margin-top:3px}
+.world-desc{font-size:6px;color:rgba(255,255,255,.7);line-height:2.2;max-width:800px;border-left:4px solid var(--wa,var(--gold));padding-left:10px;margin-bottom:8px}
+.world-std{font-size:5px;color:var(--wa,var(--gold));border:2px solid currentColor;padding:3px 8px;display:inline-block;margin-bottom:12px}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:880px;width:100%;margin:0 auto}
+.pframe{position:relative;cursor:pointer;border:4px solid rgba(255,255,255,.18);box-shadow:4px 4px 0 rgba(0,0,0,.6);transition:transform .12s,box-shadow .12s;background:#0a0a0a;aspect-ratio:4/3;overflow:hidden;display:flex;flex-direction:column}
+.pframe:hover,.pframe.sel{transform:translate(-2px,-2px);box-shadow:6px 6px 0 rgba(0,0,0,.8)}
+.pframe.sel{border-color:var(--wa,var(--gold))!important}
+.pframe:focus-visible{outline:3px solid cyan;outline-offset:3px}
+.pframe img{width:100%;height:73%;object-fit:cover;image-rendering:auto;transition:opacity .3s}
+.pframe-lbl{padding:5px;background:rgba(0,0,0,.75);border-top:2px solid rgba(255,255,255,.08);flex:1;display:flex;flex-direction:column;justify-content:center}
+.pframe-ttl{font-size:5px;color:#ddd;line-height:1.6;margin-bottom:1px}
+.pframe-art{font-size:4px;color:var(--gray);line-height:1.4}
+.disc-badge{position:absolute;top:4px;right:4px;background:var(--green);color:#000;font-size:4px;padding:2px 4px;border:2px solid #000}
+.pimg-ph{width:100%;height:73%;background:linear-gradient(135deg,#1a1a1a,#252525);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;color:#333;gap:4px}
+.pimg-ph span{font-size:4px;color:#333;text-align:center;padding:2px 4px}
+.wnav-hint{font-size:5px;color:#333;text-align:center;margin-top:8px;line-height:2.2}
+/* PAINTING MODAL */
+#pm-inner{background:var(--bg);border:4px solid var(--gold);box-shadow:8px 8px 0 rgba(0,0,0,.9);max-width:min(95vw,1020px);width:100%;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;animation:popIn .35s cubic-bezier(.175,.885,.32,1.275)}
+.pm-hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:4px solid rgba(255,255,255,.08);background:rgba(0,0,0,.4);flex-shrink:0}
+.pm-nav{display:flex;align-items:center;gap:8px}
+.pm-ctr{font-size:6px;color:var(--gray)}
+.pm-body{display:flex;flex:1;overflow:hidden;min-height:0}
+.pm-img{width:44%;flex-shrink:0;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;border-right:4px solid rgba(255,255,255,.08)}
+.pm-img img{max-width:100%;max-height:100%;object-fit:contain;image-rendering:auto;animation:revealImg .5s ease forwards}
+.pm-imgph{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;text-align:center}
+.pm-imgph .ico{font-size:36px}
+.pm-imgph .msg{font-size:6px;color:#444;line-height:2}
+.pm-src{position:absolute;bottom:6px;right:6px;font-size:4px;background:rgba(0,0,0,.7);color:#555;padding:3px 5px;border:1px solid #222}
+.pm-info{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.pm-ttl{font-size:clamp(8px,1.8vw,13px);color:var(--gold);line-height:1.6;margin-bottom:2px}
+.pm-art{font-size:7px;color:#eee;line-height:1.8}
+.pm-meta{display:flex;flex-wrap:wrap;gap:6px}
+.mchip{font-size:5px;padding:3px 7px;border:2px solid rgba(255,255,255,.12);color:rgba(255,255,255,.55);background:rgba(0,0,0,.3)}
+.pm-desc{font-size:6px;color:rgba(255,255,255,.85);line-height:2.2;border-left:4px solid var(--gold);padding-left:10px}
+.facts-hdr{font-size:7px;color:var(--gold);margin-bottom:6px}
+.fact{display:flex;gap:6px;padding:7px;margin-bottom:6px;background:rgba(255,255,255,.03);border:2px solid rgba(255,255,255,.06);font-size:5.5px;color:rgba(255,255,255,.8);line-height:1.9;animation:slideUp .3s ease forwards;opacity:0}
+.fact:nth-child(1){animation-delay:.05s}
+.fact:nth-child(2){animation-delay:.15s}
+.fact:nth-child(3){animation-delay:.25s}
+.fact:nth-child(4){animation-delay:.35s}
+.pa-badge{font-size:5px;padding:5px 8px;border:2px solid rgba(78,201,78,.35);background:rgba(78,201,78,.07);color:var(--green);display:inline-block;line-height:1.9;margin-top:2px}
+.pm-ftr{padding:8px 14px;border-top:4px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:rgba(0,0,0,.3);flex-wrap:wrap;gap:6px}
+.pm-khint{font-size:5px;color:#444;line-height:2}
+.closebtn{background:transparent;color:var(--red);border:2px solid var(--red);padding:5px 9px;font-size:7px;cursor:pointer;transition:background .1s}
+.closebtn:hover{background:rgba(232,69,69,.2)}
+.closebtn:focus-visible{outline:3px solid cyan;outline-offset:3px}
+/* TEACHER */
+#tp-inner{background:#111;border:4px solid var(--red);box-shadow:8px 8px 0 rgba(0,0,0,.9);max-width:min(95vw,780px);width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;animation:popIn .35s cubic-bezier(.175,.885,.32,1.275)}
+.tp-hdr{padding:10px 14px;background:#1a0000;border-bottom:4px solid rgba(232,69,69,.25);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.tp-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px}
+.tp-sec{border:2px solid #2a2a2a;padding:12px}
+.tp-sec-ttl{font-size:7px;color:var(--gold);margin-bottom:10px;border-bottom:2px solid #2a2a2a;padding-bottom:7px}
+.tform{display:flex;flex-direction:column;gap:9px}
+.frow{display:flex;gap:8px;flex-wrap:wrap}
+.ffield{display:flex;flex-direction:column;gap:5px;flex:1;min-width:150px}
+.flbl{font-size:5px;color:#888}
+.finput{background:#181818;border:2px solid #333;color:#eee;padding:7px;font-size:6px;outline:none;width:100%}
+.finput:focus{border-color:var(--gold)}
+.fta{background:#181818;border:2px solid #333;color:#eee;padding:7px;font-size:6px;outline:none;resize:vertical;min-height:70px;width:100%}
+.fta:focus{border-color:var(--gold)}
+.fsel{background:#181818;border:2px solid #333;color:#eee;padding:7px;font-size:6px;outline:none;width:100%;cursor:pointer}
+.upzone{border:2px dashed #333;padding:14px;text-align:center;cursor:pointer;transition:border-color .2s}
+.upzone:hover{border-color:var(--gold)}
+.upzone-txt{font-size:5px;color:#555;line-height:2}
+.tlist{display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto}
+.titem{display:flex;align-items:center;gap:7px;padding:5px 7px;background:#181818;border:2px solid #252525;font-size:5px;color:#bbb}
+.titem .ittl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.titem .iwld{color:#777;font-size:4px;padding:2px 4px;border:1px solid #333}
+.tp-ftr{padding:10px 14px;border-top:2px solid #222;display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex-shrink:0}
+.ttabs{display:flex;border-bottom:2px solid #2a2a2a;margin-bottom:10px;overflow-x:auto}
+.ttab{padding:7px 12px;font-size:6px;color:#555;cursor:pointer;border-bottom:4px solid transparent;white-space:nowrap}
+.ttab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.tpanel{display:none}
+.tpanel.on{display:block}
+#tlogin{display:flex;flex-direction:column;align-items:center;gap:14px;padding:28px}
+.tl-ttl{font-size:10px;color:var(--red)}
+.tl-sub{font-size:6px;color:#555;line-height:2;text-align:center}
+.pin-in{background:#181818;border:4px solid #333;color:#eee;padding:10px 14px;font-size:14px;text-align:center;width:180px;letter-spacing:6px;outline:none}
+.pin-in:focus{border-color:var(--gold)}
+.tpnote{font-size:5px;color:#444;line-height:2;text-align:center}
+.stmsg{font-size:6px;padding:6px;margin-top:6px;line-height:1.8}
+.stmsg.ok{color:var(--green);background:rgba(78,201,78,.08);border:2px solid rgba(78,201,78,.25)}
+.stmsg.err{color:var(--red);background:rgba(232,69,69,.08);border:2px solid rgba(232,69,69,.25)}
+.stmsg.inf{color:#8ab4ff;background:rgba(100,150,255,.08);border:2px solid rgba(100,150,255,.25)}
+/* World BGs */
+.wbg-florence{background:linear-gradient(180deg,#160800 0%,#2c1205 40%,#180900 100%)}
+.wbg-paris{background:linear-gradient(180deg,#08081a 0%,#141430 40%,#080818 100%)}
+.wbg-dutch{background:linear-gradient(180deg,#020810 0%,#081525 40%,#040c18 100%)}
+.wbg-japan{background:linear-gradient(180deg,#1a0000 0%,#2e0404 40%,#120000 100%)}
+.wbg-egypt{background:linear-gradient(180deg,#0e0700 0%,#1c1000 40%,#0a0600 100%)}
+.wbg-harlem{background:linear-gradient(180deg,#080010 0%,#140622 40%,#050010 100%)}
+/* Scrollbar */
+::-webkit-scrollbar{width:7px;height:7px}
+::-webkit-scrollbar-track{background:#111}
+::-webkit-scrollbar-thumb{background:#333;border:2px solid #111}
+/* Responsive */
+@media(max-width:680px){
+  .mgrid{grid-template-columns:repeat(2,1fr)}
+  .pgrid{grid-template-columns:repeat(2,1fr)}
+  .pm-body{flex-direction:column}
+  .pm-img{width:100%;height:180px;border-right:none;border-bottom:4px solid rgba(255,255,255,.08)}
+}
+@media(max-width:420px){
+  .mgrid{grid-template-columns:1fr 1fr}
+  .pgrid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- TITLE -->
+<div id="screen-title" class="screen scanlines active">
+  <div class="tstars" id="tstars"></div>
+  <div class="float" style="font-size:38px;margin-bottom:6px">🎨</div>
+  <div style="font-size:clamp(13px,3vw,26px);color:var(--gold);text-align:center;line-height:1.7;text-shadow:4px 4px 0 rgba(0,0,0,.8);margin-bottom:6px">ART ACROSS<br>TIME</div>
+  <div style="font-size:clamp(6px,1.2vw,9px);color:#8ab4cc;text-align:center;margin-bottom:32px;line-height:2.2">A PA Art Education Adventure<br><span style="font-size:5px;color:#4a6a80">6 WORLDS &nbsp;·&nbsp; 36 MASTERWORKS &nbsp;·&nbsp; INFINITE CURIOSITY</span></div>
+  <div style="display:flex;gap:14px;margin-bottom:32px;flex-wrap:wrap;justify-content:center">
+    <div style="width:38px;height:38px;background:#3a1005;border:4px solid #000;box-shadow:4px 4px 0 #000;display:flex;align-items:center;justify-content:center;font-size:18px;animation:float 3s ease-in-out infinite">🏛️</div>
+    <div style="width:38px;height:38px;background:#121840;border:4px solid #000;box-shadow:4px 4px 0 #000;display:flex;align-items:center;justify-content:center;font-size:18px;animation:float 3s ease-in-out infinite;animation-delay:.3s">🗼</div>
+    <div style="width:38px;height:38px;background:#08152a;border:4px solid #000;box-shadow:4px 4px 0 #000;display:flex;align-items:center;justify-content:center;font-size:18px;animation:float 3s ease-in-out infinite;animation-delay:.6s">🌷</div>
+    <div style="width:38px;height:38px;background:#3a0505;border:4px solid #000;box-shadow:4px 4px 0 #000;display:flex;align-items:center;justify-content:center;font-size:18px;animation:float 3s ease-in-out infinite;animation-delay:.9s">⛩️</div>
+    <div style="width:38px;height:38px;background:#2a1800;border:4px solid #000;box-shadow:4px 4px 0 #000;display:flex;align-items:center;justify-content:center;font-size:18px;animation:float 3s ease-in-out infinite;animation-delay:1.2s">🏺</div>
+    <div style="width:38px;height:38px;background:#12041e;border:4px solid #000;box-shadow:4px 4px 0 #000;display:flex;align-items:center;justify-content:center;font-size:18px;animation:float 3s ease-in-out infinite;animation-delay:1.5s">🎷</div>
+  </div>
+  <button class="pxbtn lg blink" onclick="startGame()" id="startbtn">▶ PRESS START</button>
+  <div style="margin-top:20px;font-size:5px;color:#333;line-height:2.5;text-align:center">
+    <span class="keybadge">SPACE</span> or <span class="keybadge">ENTER</span> to start &nbsp;·&nbsp; <span class="keybadge">CTRL+T</span> Teacher Mode
+  </div>
+  <div style="position:absolute;bottom:10px;right:14px">
+    <button class="pxbtn sm gray" onclick="openTeacher()">👩‍🏫 TEACHER</button>
+  </div>
+  <div style="position:absolute;bottom:10px;left:14px;font-size:4px;color:#2a2a2a;line-height:2">
+    Images: Met Open Access · Wikimedia Commons (PD) · Art Institute of Chicago<br>
+    PA Standards: 9.1 · 9.2 · 9.3 · 9.4 &nbsp;|&nbsp; v1.0
+  </div>
+</div>
+
+<!-- MAP -->
+<div id="screen-map" class="screen scanlines">
+  <div class="map-hdr">
+    <div class="map-ttl">🗺️ CHOOSE YOUR ERA</div>
+    <div class="map-sub">Travel through art history · Discover 36 masterworks</div>
+    <div class="map-prog" id="map-prog">Discovered: 0 / 36</div>
+  </div>
+  <div class="mgrid" id="mgrid"></div>
+  <div class="kbbar">
+    <span class="khint"><span class="keybadge">↑↓←→</span> Navigate</span>
+    <span class="khint"><span class="keybadge">ENTER</span> Select</span>
+    <span class="khint"><span class="keybadge">ESC</span> Title</span>
+    <span class="khint"><span class="keybadge">CTRL+T</span> Teacher</span>
+  </div>
+</div>
+
+<!-- WORLD -->
+<div id="screen-world" class="screen scanlines">
+  <div class="world-hdr">
+    <div>
+      <button class="pxbtn sm gray" onclick="goToMap()" style="margin-bottom:8px">← MAP</button>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+        <span id="w-em" style="font-size:26px"></span>
+        <div>
+          <div class="world-nm" id="w-nm"></div>
+          <div class="world-pd" id="w-pd"></div>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:8px;color:var(--green)" id="w-pg">0 / 6</div>
+      <div style="font-size:5px;color:var(--gray)">Discovered</div>
+    </div>
+  </div>
+  <div class="world-desc" id="w-desc"></div>
+  <div class="world-std" id="w-std"></div>
+  <div class="pgrid" id="pgrid"></div>
+  <div class="wnav-hint"><span class="keybadge">←→↑↓</span> Navigate &nbsp;<span class="keybadge">ENTER</span> View &nbsp;<span class="keybadge">ESC</span> Map</div>
+</div>
+
+<!-- PAINTING MODAL -->
+<div id="pmodal" class="modal-ov" role="dialog" aria-modal="true">
+  <div id="pm-inner">
+    <div class="pm-hdr">
+      <div class="pm-nav">
+        <button class="pxbtn sm" onclick="navPainting(-1)" id="prev-btn">◀ PREV</button>
+        <span class="pm-ctr" id="pm-ctr">1 / 6</span>
+        <button class="pxbtn sm" onclick="navPainting(1)" id="next-btn">NEXT ▶</button>
+      </div>
+      <button class="closebtn" onclick="closePainting()">✕ CLOSE</button>
+    </div>
+    <div class="pm-body">
+      <div class="pm-img" id="pm-img"></div>
+      <div class="pm-info" id="pm-info"></div>
+    </div>
+    <div class="pm-ftr">
+      <div class="pm-khint"><span class="keybadge">←→</span> Prev/Next &nbsp;<span class="keybadge">ESC</span> Close</div>
+      <div id="pm-src" style="font-size:4px;color:#333"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TEACHER MODAL -->
+<div id="tmodal" class="modal-ov" role="dialog" aria-modal="true">
+  <div id="tp-inner">
+    <div class="tp-hdr">
+      <span style="font-size:9px;color:var(--red)">👩‍🏫 TEACHER PANEL</span>
+      <button class="closebtn" onclick="closeTeacher()">✕ CLOSE</button>
+    </div>
+    <div class="tp-body">
+      <div id="tlogin">
+        <div class="tl-ttl">🔐 TEACHER ACCESS</div>
+        <div class="tl-sub">Enter your teacher PIN</div>
+        <input type="password" class="pin-in" id="tpin" placeholder="••••" maxlength="8" onkeydown="if(event.key==='Enter')verifyPin()">
+        <button class="pxbtn grn" onclick="verifyPin()">UNLOCK ▶</button>
+        <div class="tpnote">Default PIN: <strong style="color:var(--gold)">art1234</strong></div>
+        <div id="tpin-msg"></div>
+      </div>
+      <div id="tmain" style="display:none">
+        <div class="ttabs">
+          <div class="ttab on" onclick="switchTab('add')" id="tab-add">➕ ADD ART</div>
+          <div class="ttab" onclick="switchTab('manage')" id="tab-manage">📋 MANAGE</div>
+          <div class="ttab" onclick="switchTab('import')" id="tab-import">📂 IMPORT/EXPORT</div>
+          <div class="ttab" onclick="switchTab('settings')" id="tab-settings">⚙️ SETTINGS</div>
+        </div>
+        <!-- ADD -->
+        <div id="tpanel-add" class="tpanel on">
+          <div class="tp-sec"><div class="tp-sec-ttl">ADD ARTWORK</div>
+          <div class="tform">
+            <div class="frow">
+              <div class="ffield"><div class="flbl">WORLD *</div>
+                <select class="fsel" id="f-world"></select></div>
+              <div class="ffield"><div class="flbl">TITLE *</div>
+                <input class="finput" id="f-title" placeholder="Artwork title"></div>
+            </div>
+            <div class="frow">
+              <div class="ffield"><div class="flbl">ARTIST *</div>
+                <input class="finput" id="f-artist" placeholder="Artist name"></div>
+              <div class="ffield"><div class="flbl">YEAR</div>
+                <input class="finput" id="f-year" placeholder="e.g. 1889"></div>
+            </div>
+            <div class="ffield"><div class="flbl">IMAGE URL (leave blank to upload)</div>
+              <input class="finput" id="f-url" placeholder="https://..."></div>
+            <div class="ffield"><div class="flbl">OR UPLOAD IMAGE FILE</div>
+              <div class="upzone" onclick="document.getElementById('f-file').click()" ondrop="dropFile(event)" ondragover="event.preventDefault()">
+                <div class="upzone-txt">📁 Click or drag & drop image<br>PNG · JPG · GIF · WEBP</div>
+                <div id="up-preview" style="font-size:5px;color:var(--green);margin-top:6px"></div>
+              </div>
+              <input type="file" id="f-file" accept="image/*" style="display:none" onchange="loadFile(this)">
+            </div>
+            <div class="frow">
+              <div class="ffield"><div class="flbl">MEDIUM</div>
+                <input class="finput" id="f-medium" placeholder="e.g. Oil on canvas"></div>
+              <div class="ffield"><div class="flbl">LOCATION / MUSEUM</div>
+                <input class="finput" id="f-location" placeholder="Museum name, City"></div>
+            </div>
+            <div class="frow">
+              <div class="ffield"><div class="flbl">SOURCE</div>
+                <input class="finput" id="f-source" placeholder="e.g. Met Open Access (CC0)"></div>
+              <div class="ffield"><div class="flbl">PA STANDARD</div>
+                <input class="finput" id="f-standard" placeholder="e.g. 9.2.8.A"></div>
+            </div>
+            <div class="ffield"><div class="flbl">DESCRIPTION (2-3 sentences)</div>
+              <textarea class="fta" id="f-desc" placeholder="Describe the artwork..."></textarea></div>
+            <div class="ffield"><div class="flbl">FUN FACTS (one per line, start with emoji)</div>
+              <textarea class="fta" id="f-facts" style="min-height:90px" placeholder="🎨 First fact...&#10;🔍 Second fact...&#10;⭐ Third fact...&#10;💡 Fourth fact..."></textarea></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="pxbtn grn sm" onclick="addArt()">✓ ADD ARTWORK</button>
+              <button class="pxbtn gray sm" onclick="clearForm()">✕ CLEAR</button>
+            </div>
+            <div id="add-msg"></div>
+          </div></div>
+        </div>
+        <!-- MANAGE -->
+        <div id="tpanel-manage" class="tpanel">
+          <div class="tp-sec"><div class="tp-sec-ttl">ALL ARTWORKS</div>
+            <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
+              <select class="fsel" id="filter-world" style="width:auto" onchange="renderManage()"></select>
+              <span style="font-size:5px;color:var(--gray)" id="manage-ct"></span>
+            </div>
+            <div class="tlist" id="tlist"></div>
+          </div>
+        </div>
+        <!-- IMPORT/EXPORT -->
+        <div id="tpanel-import" class="tpanel">
+          <div class="tp-sec"><div class="tp-sec-ttl">IMPORT FROM JSON</div>
+            <p style="font-size:5px;color:#666;line-height:2;margin-bottom:10px">Paste a JSON array of artwork objects. Format: [{title,artist,year,worldId,url,description,facts:[...],paStandard,...}]</p>
+            <textarea class="fta" id="f-json" style="min-height:100px;width:100%" placeholder='[{"title":"My Art","artist":"Name","year":"1920","worldId":"harlem","url":"https://...","description":"...","facts":["Fact 1","Fact 2"]}]'></textarea>
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+              <button class="pxbtn blu sm" onclick="doImport()">📂 IMPORT JSON</button>
+              <button class="pxbtn gray sm" onclick="doExportJSON()">📋 EXPORT CURRENT JSON</button>
+            </div>
+            <div id="import-msg"></div>
+          </div>
+          <div class="tp-sec" style="margin-top:12px"><div class="tp-sec-ttl">DOWNLOAD STANDALONE GAME</div>
+            <p style="font-size:5px;color:#666;line-height:2;margin-bottom:10px">Downloads a complete HTML file with all your custom artworks included. Share via Google Classroom or USB — no install needed.</p>
+            <div class="frow">
+              <div class="ffield"><div class="flbl">GAME TITLE</div>
+                <input class="finput" id="exp-title" value="Art Across Time"></div>
+              <div class="ffield"><div class="flbl">PIN FOR EXPORTED FILE</div>
+                <input type="password" class="finput" id="exp-pin" placeholder="Leave blank = keep current"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+              <button class="pxbtn grn sm" onclick="exportGame()">💾 DOWNLOAD HTML GAME</button>
+              <button class="pxbtn blu sm" onclick="exportDataFile()">📄 DOWNLOAD DATA JSON</button>
+            </div>
+            <div style="font-size:4px;color:#333;margin-top:8px;line-height:2">
+              Artworks: <span id="exp-ct"></span> total · Images load from original URLs (uploaded files embedded as base64)
+            </div>
+          </div>
+        </div>
+        <!-- SETTINGS -->
+        <div id="tpanel-settings" class="tpanel">
+          <div class="tp-sec"><div class="tp-sec-ttl">SETTINGS</div>
+          <div class="tform">
+            <div class="frow">
+              <div class="ffield"><div class="flbl">NEW PIN</div>
+                <input type="password" class="finput" id="new-pin" placeholder="New PIN" maxlength="8"></div>
+              <div class="ffield"><div class="flbl">CONFIRM PIN</div>
+                <input type="password" class="finput" id="new-pin2" placeholder="Confirm PIN" maxlength="8"></div>
+            </div>
+            <button class="pxbtn blu sm" onclick="changePin()">🔐 UPDATE PIN</button>
+            <div id="pin-msg"></div>
+            <div style="border-top:2px solid #2a2a2a;padding-top:10px;margin-top:4px">
+              <button class="pxbtn red sm" onclick="resetProgress()">🔄 RESET STUDENT PROGRESS</button>
+              <span style="font-size:5px;color:#444;margin-left:8px">Clears all discovered paintings</span>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// GAME DATA — 6 worlds × 6 paintings = 36 masterworks
+// Sources: Met Open Access (CC0), Wikimedia Commons (Public Domain),
+//          Art Institute of Chicago (Open Access), Smithsonian (CC0)
+// ============================================================
+let GAME_DATA = [
+  {id:'florence',name:'Renaissance\nFlorence',emoji:'🏛️',period:'1400–1600 CE',bgClass:'wbg-florence',accent:'#FFD700',
+   desc:'The cradle of the Renaissance, where art, science, and humanism bloomed together in the workshops and palazzos of Florence, Italy.',
+   std:'PA 9.2.8.A · 9.3.8.A',
+   paintings:[
+    {id:'birth_venus',title:'The Birth of Venus',artist:'Sandro Botticelli',year:'~1484–1486',
+     medium:'Tempera on canvas',location:'Uffizi Gallery, Florence',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Sandro_Botticelli_046.jpg/800px-Sandro_Botticelli_046.jpg',
+     desc:'Venus, goddess of love, rises from the sea on a giant clamshell. One of the first large-scale non-religious paintings of the Renaissance — completely revolutionary for its time.',
+     std:'9.2.8.A – Historical & Cultural Contexts',
+     facts:['🐚 The model for Venus may have been Simonetta Vespucci, a beloved Florentine beauty who died at only 22. Botticelli reportedly loved her his entire life.',
+            '🍃 The blowing figure on the left is Zephyrus, the West Wind, embracing the nymph Chloris — together they push Venus to shore.',
+            '🔍 X-ray studies revealed Botticelli completely repositioned Venus\'s legs and arms mid-painting. The final pose was not his first idea.',
+            '💰 Commissioned by the powerful Medici family, who bankrolled the entire Italian Renaissance.']},
+    {id:'mona_lisa',title:'Mona Lisa',artist:'Leonardo da Vinci',year:'~1503–1519',
+     medium:'Oil on poplar panel',location:'Louvre Museum, Paris',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/402px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg',
+     desc:'The most famous painting in the world uses Leonardo\'s sfumato technique — soft, smoky transitions between light and shadow that give her that mysterious, timeless quality.',
+     std:'9.1.8.B – Elements & Principles of Art',
+     facts:['🕵️ STOLEN from the Louvre in 1911! An Italian handyman hid overnight then walked out with it under his coat. It was missing for 2 years.',
+            '😶 She has no eyebrows or eyelashes — either they faded over 500 years, or the fashion of 1503 was to shave them off.',
+            '👀 Her eyes appear to follow you wherever you stand. Scientists studied this and named it "the Mona Lisa Effect."',
+            '🎖️ Napoleon had it hung in his bedroom for years before it went to the Louvre. He called her "La Belle Hollandaise."']},
+    {id:'primavera',title:'Primavera (Spring)',artist:'Sandro Botticelli',year:'~1477–1482',
+     medium:'Tempera on panel',location:'Uffizi Gallery, Florence',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Botticelli-primavera.jpg/800px-Botticelli-primavera.jpg',
+     desc:'A lush mythological garden with Venus, the Three Graces, Mercury, and the transformation of the nymph Chloris into Flora. Art historians still debate its exact meaning after 500+ years.',
+     std:'9.3.8.B – Critical Response & Analysis',
+     facts:['🌸 Botanists identified over 500 plant species and 190 different flower varieties. Botticelli had serious help from a botanist friend.',
+            '🕺 The exact meaning of the Three Graces dancing on the left is still debated today — love, beauty, pleasure? Virtue? Nobody fully agrees.',
+            '📦 The painting was rolled up and forgotten in a storeroom for centuries, only rediscovered in the 1800s with some damage still visible.',
+            '🌀 Mercury on the far left uses his caduceus staff to push away clouds — clearing the sky to bring in spring.']},
+    {id:'school_athens',title:'The School of Athens',artist:'Raphael Sanzio',year:'1509–1511',
+     medium:'Fresco (painted on plaster wall)',location:'Apostolic Palace, Vatican City',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/%22The_School_of_Athens%22_by_Raffaello_Sanzio_da_Urbino.jpg/800px-%22The_School_of_Athens%22_by_Raffaello_Sanzio_da_Urbino.jpg',
+     desc:'Every great Greek philosopher gathered in one magnificent hall! Raphael painted this directly on the Pope\'s library wall as a celebration of human knowledge and reason.',
+     std:'9.2.8.B – Chronological Relationships',
+     facts:['🧠 Plato points UP (toward ideal forms in heaven) while Aristotle points DOWN (to the physical world). Their entire opposing philosophies in one gesture!',
+            '😏 Raphael painted himself into the scene — look for a young man on the far right edge looking directly at you, wearing a dark hat.',
+            '🎨 The grumpy figure alone in front is Heraclitus — but his face is Michelangelo, who was painting the Sistine Chapel just down the hall at the same time!',
+            '🏛️ The grand architecture was inspired by Raphael\'s friend Bramante\'s designs for the new St. Peter\'s Basilica.']},
+    {id:'last_supper',title:'The Last Supper',artist:'Leonardo da Vinci',year:'1495–1498',
+     medium:'Tempera & oil on plaster',location:'Santa Maria delle Grazie, Milan',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/%C3%9Altima_Cena_-_Da_Vinci_5.jpg/800px-%C3%9Altima_Cena_-_Da_Vinci_5.jpg',
+     desc:'Leonardo captured the exact moment Jesus says "one of you will betray me." Every apostle reacts differently — a masterclass in painting human emotion and psychological truth.',
+     std:'9.1.8.C – Art Vocabulary & Techniques',
+     facts:['😤 Leonardo couldn\'t find anyone evil-looking enough to paint Judas. He used the monastery prior (head monk) who kept nagging him to hurry up and finish!',
+            '💧 The paint began peeling within 20 years — Leonardo used an experimental technique instead of traditional fresco, sacrificing permanence for detail.',
+            '🚪 In 1652, someone cut a doorway through the wall below, destroying Jesus\'s feet. Nobody thought to check what was painted there.',
+            '🔍 The arrangement of food on the table has inspired countless conspiracy theories. Most art historians call them creative overreach.']},
+    {id:'david',title:'David',artist:'Michelangelo Buonarroti',year:'1501–1504',
+     medium:'White Carrara marble',location:'Galleria dell\'Accademia, Florence',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/%27David%27_by_Michelangelo_Fir_JBU002.jpg/640px-%27David%27_by_Michelangelo_Fir_JBU002.jpg',
+     desc:'Standing 17 feet tall, David shows the biblical hero moments BEFORE his battle with Goliath — tense, focused, coiled like a spring. Carved from a marble block two sculptors had already abandoned.',
+     std:'9.1.8.A – Production in Visual Arts',
+     facts:['😤 Michelangelo was only 26 when he started carving — yet this became the most celebrated sculpture in Western art history.',
+            '🔨 The marble had been abandoned and nicknamed "the Giant" by two prior sculptors who gave up. Michelangelo specifically requested this "ruined" stone.',
+            '👁️ His right hand is intentionally larger than his left — it is the "strong hand" that will throw the sling-stone. A nod to classical Greek stylization.',
+            '🚚 Moving the finished 6-ton sculpture to its public location took 40 men and 4 full days using wooden rollers.']},
+  ]},
+  {id:'paris',name:'Impressionist\nParis',emoji:'🗼',period:'1860–1890 CE',bgClass:'wbg-paris',accent:'#F4C2C2',
+   desc:'In the cafés and countryside of France, rebel artists broke every rule — painting outdoors, capturing fleeting light in loose, visible brushstrokes. The Impressionists changed art forever.',
+   std:'PA 9.1.8.B · 9.2.8.C',
+   paintings:[
+    {id:'water_lilies',title:'Water Lilies',artist:'Claude Monet',year:'1906',
+     medium:'Oil on canvas',location:'Metropolitan Museum of Art, New York',source:'Met Open Access (CC0)',
+     url:'https://images.metmuseum.org/CRDImages/ep/original/DT1953.jpg',
+     desc:'Monet created over 250 paintings of his water garden at Giverny. These became some of the most beloved works in history — and directly inspired generations of abstract painters.',
+     std:'9.1.8.B – Elements & Principles (Color, Light)',
+     facts:['👁️ Monet had severe cataracts while painting many of his Water Lilies. His color vision was affected — compare his early bright blues to the muddier, yellower late works!',
+            '🌸 He designed and built his entire water garden himself, personally redirecting a stream with special government permits. His neighbors were furious.',
+            '📏 His panoramic Water Lily murals at the Orangerie museum in Paris are 6 feet tall and 360 feet long — visitors stand surrounded by them on all sides.',
+            '🎭 On Armistice Day 1918, Monet almost burned all 12 large Water Lily paintings. He felt they were failures. His friend Clemenceau convinced him to keep them.']},
+    {id:'dance_class',title:'The Dance Class',artist:'Edgar Degas',year:'1874',
+     medium:'Oil on canvas',location:'Metropolitan Museum of Art, New York',source:'Met Open Access (CC0)',
+     url:'https://images.metmuseum.org/CRDImages/ep/original/DT1876.jpg',
+     desc:'Degas was obsessed with ballet — but with the hard work behind the curtain, not the glamour. He showed dancers stretching, fidgeting, and waiting under the critical eye of their teacher.',
+     std:'9.3.8.A – Critical Response',
+     facts:['🩰 Degas made over 1,500 artworks of ballet dancers in his lifetime — the world\'s first dedicated dance photographer before photography existed!',
+            '🎻 The man tapping his stick is Jules Perrot, a famous real ballet master. His expression says exactly what he thinks of his students\' progress.',
+            '🤫 Degas deliberately showed the unglamorous reality: girls scratching their backs, fixing ribbons, yawning. His era expected noble, formal subjects.',
+            '👁️ Like Monet, Degas had serious eye disease and eventually could barely see. He turned to sculpture because he could feel it with his hands.']},
+    {id:'grande_jatte',title:'A Sunday on La Grande Jatte',artist:'Georges Seurat',year:'1884–1886',
+     medium:'Oil on canvas',location:'Art Institute of Chicago, Illinois',source:'Art Institute of Chicago (Open Access)',
+     url:'https://www.artic.edu/iiif/2/1adf2696-8489-499b-cad2-821d7fde4b33/full/843,/0/default.jpg',
+     desc:'Seurat invented Pointillism — placing thousands of tiny colored dots so your eye blends them into new colors. This single painting took two years and transformed how artists thought about color science.',
+     std:'9.1.8.C – Artistic Vocabulary & Techniques',
+     facts:['🔬 Seurat based his technique on actual color science — placing dots of pure color next to each other so your brain mixes them. He called it "chromoluminarism."',
+            '🐒 The woman on the far right has a pet MONKEY on a leash. Fashionable Parisians kept exotic animals as status symbols in the 1880s!',
+            '⏰ Seurat made over 60 preparatory sketches before touching the final canvas. Then painted it over 2 years. Total dedication.',
+            '📐 All figures are deliberately stiff and rigid — like an ancient Egyptian frieze — to contrast with the Impressionists\' loose, carefree, "sloppy" style.']},
+    {id:'impression_sunrise',title:'Impression, Sunrise',artist:'Claude Monet',year:'1872',
+     medium:'Oil on canvas',location:'Musée Marmottan Monet, Paris',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Monet_-_Impression%2C_Sunrise.jpg/800px-Monet_-_Impression%2C_Sunrise.jpg',
+     desc:'This painting accidentally named an entire art movement! A critic used the title mockingly, calling the new style "Impressionism" as an insult. The artists adopted the name with pride.',
+     std:'9.2.8.C – Art Movements & Their Influences',
+     facts:['🏷️ Critic Louis Leroy called it an unfinished sketch and meant "Impressionism" as a nasty insult. The artists responded: "Perfect. That\'s our name now."',
+            '🌅 Astronomers confirmed the exact date Monet painted this: November 13, 1872, at 7:35 AM — by matching the sun\'s position to historical tide tables.',
+            '🚢 Those dark silhouettes are industrial harbor cranes. Monet wasn\'t afraid to paint the modern, industrial world that other artists avoided.',
+            '🔴 The orange sun is technically the same brightness as the gray sky around it — but your brain perceives it as the brightest thing in the painting.']},
+    {id:'moulin_galette',title:'Bal du Moulin de la Galette',artist:'Pierre-Auguste Renoir',year:'1876',
+     medium:'Oil on canvas',location:'Musée d\'Orsay, Paris',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/Auguste_Renoir_-_Bal_du_moulin_de_la_Galette.jpg/800px-Auguste_Renoir_-_Bal_du_moulin_de_la_Galette.jpg',
+     desc:'A joyful outdoor dance party in Montmartre bathed in dappled sunlight. Renoir lugged this enormous canvas up the steep Montmartre hill every Sunday for months to paint the real atmosphere.',
+     std:'9.1.8.B – Light & Color in Impressionism',
+     facts:['🌳 Renoir was obsessed with sunlight through leaves — see the flickering light patches dancing across people\'s clothing and faces throughout the crowd.',
+            '🎪 The Moulin de la Galette was a real Montmartre dance hall. It still exists today — now it\'s a very expensive restaurant.',
+            '👨‍👩‍👧 Every single person in this crowd was Renoir\'s real friend. He asked them to come to the actual dance hall every Sunday to be painted.',
+            '🏋️ Hauling a painting this large up the steep Montmartre hill every single Sunday must have given Renoir remarkable upper-body strength.']},
+    {id:'absinthe',title:'L\'Absinthe (In a Café)',artist:'Edgar Degas',year:'1876',
+     medium:'Oil on canvas',location:'Musée d\'Orsay, Paris',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Edgar_Degas_-_Dans_un_caf%C3%A9.jpg/600px-Edgar_Degas_-_Dans_un_caf%C3%A9.jpg',
+     desc:'Two people sit in a Paris café, completely lost in their own separate worlds. Degas painted them with unflinching honesty — tired, isolated, not posing. 1876 audiences were deeply shocked.',
+     std:'9.3.8.B – Aesthetic Judgment',
+     facts:['😠 When shown in London, one critic called it "a degrading gutter masterpiece" and another called it a triumph. The exact same painting, completely opposite reactions.',
+            '🍸 Absinthe was a powerful anise-flavored drink nicknamed "the green fairy" — wildly popular in Paris but blamed for causing madness. Banned in 1915.',
+            '🎭 The models were actress Ellen Andrée and artist Marcellin Desboutin — close friends having fun together, NOT the miserable people they appear to be!',
+            '📸 The unusual cropped composition looks exactly like a candid photograph — Degas was deeply inspired by the new invention of photography.']},
+  ]},
+  {id:'dutch',name:'Dutch\nGolden Age',emoji:'🌷',period:'1600–1700 CE',bgClass:'wbg-dutch',accent:'#F5C518',
+   desc:'When Dutch merchants became the wealthiest people on Earth, they filled their homes with paintings. For the first time in history, art was made for regular people — not just kings and churches.',
+   std:'PA 9.2.8.A · 9.1.8.B',
+   paintings:[
+    {id:'pearl_earring',title:'Girl with a Pearl Earring',artist:'Johannes Vermeer',year:'~1665',
+     medium:'Oil on canvas',location:'Mauritshuis Museum, The Hague',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/800px-1665_Girl_with_a_Pearl_Earring.jpg',
+     desc:'Called the "Mona Lisa of the North" — this mysterious girl glances over her shoulder with parted lips. Nobody knows who she is. And that earring? Scientists say it\'s probably not even real pearl.',
+     std:'9.3.8.A – Critical Response',
+     facts:['🔍 Modern analysis suggests the earring is painted glass or tin, not a real pearl. Inexpensive fashion jewelry was common in 17th century Netherlands.',
+            '👁️ Look closely at her eye — Vermeer added a tiny comma-shaped white highlight that makes her eye appear wet and alive. It\'s his signature trick.',
+            '❓ Nobody knows who she was. Theories: Vermeer\'s 12-year-old daughter Maria, a household servant, or a completely imaginary ideal figure.',
+            '💎 The blue in her turban is crushed lapis lazuli from Afghanistan — over 3,000 miles away — and cost as much as gold per ounce.']},
+    {id:'night_watch',title:'The Night Watch',artist:'Rembrandt van Rijn',year:'1642',
+     medium:'Oil on canvas',location:'Rijksmuseum, Amsterdam',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Rembrandt_van_Rijn_-_The_Night_Watch_-_Google_Art_Project.jpg/800px-Rembrandt_van_Rijn_-_The_Night_Watch_-_Google_Art_Project.jpg',
+     desc:'An enormous 12-foot group portrait of Amsterdam\'s city guard bursting into action. Rembrandt shattered the boring convention of neat row portraits with real movement and theatrical light.',
+     std:'9.1.8.B – Composition & Light',
+     facts:['✂️ The painting was cut on ALL four sides in 1715 to fit through a doorway — removing two complete figures from the left side. We only know them from a small copy.',
+            '🔪 This painting survived THREE attacks: knife slash in 1911, knife slash in 1975, and acid spraying in 1990. Maximum security now.',
+            '🌙 It\'s NOT a night scene! Centuries of dirty varnish made it dark. Cleaned in 1947, it was revealed to be a bright DAYTIME scene.',
+            '💰 The 18 guardsmen each paid to be included — and Rembrandt painted them proportionally larger based on how much each man paid!']},
+    {id:'milkmaid',title:'The Milkmaid',artist:'Johannes Vermeer',year:'~1657–1658',
+     medium:'Oil on canvas',location:'Rijksmuseum, Amsterdam',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Johannes_Vermeer_-_Het_melkmeisje_-_Google_Art_Project.jpg/800px-Johannes_Vermeer_-_Het_melkmeisje_-_Google_Art_Project.jpg',
+     desc:'A maidservant pours milk with total concentration, bathed in cool morning light from a window. Vermeer made the most ordinary everyday moment feel absolutely sacred — a completely new idea in art.',
+     std:'9.1.8.B – Light, Shadow & Everyday Life',
+     facts:['🔬 X-rays show Vermeer painted OUT a wicker basket, a map, and an entire second window to simplify the scene. Every remaining object was a deliberate artistic choice.',
+            '🍞 The foot warmer under the table had a secret meaning in Dutch art — it symbolized romantic longing and desire. Was she waiting for someone?',
+            '💎 The blue apron is crushed lapis lazuli from Afghanistan — one of the most expensive pigments in 17th century Europe, used here on a maid\'s workday apron.',
+            '🏠 Vermeer probably used a camera obscura — a dark box that projects images like a lens — to achieve his impossibly accurate light and perspective.']},
+    {id:'anatomy_lesson',title:'Anatomy Lesson of Dr. Nicolaes Tulp',artist:'Rembrandt van Rijn',year:'1632',
+     medium:'Oil on canvas',location:'Mauritshuis Museum, The Hague',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Rembrandt_-_The_Anatomy_Lesson_of_Dr_Nicolaes_Tulp.jpg/800px-Rembrandt_-_The_Anatomy_Lesson_of_Dr_Nicolaes_Tulp.jpg',
+     desc:'Dr. Tulp demonstrates the arm\'s muscles to a crowd of surgeons. Public anatomy dissections happened once a year in Amsterdam and were a major ticketed social event — people dressed up for them!',
+     std:'9.2.8.A – Art & Historical Context',
+     facts:['💀 The corpse is Aris Kindt, a convicted criminal executed that same morning. By law, public dissections could only use the bodies of executed criminals.',
+            '📚 The open anatomy textbook at his feet is Vesalius\'s "Fabric of the Human Body" — the leading medical text of the era, essentially an advertisement.',
+            '🧠 Problem: the exposed arm tendons Rembrandt painted don\'t match real human anatomy. He was a brilliant artist, but definitely not a surgeon.',
+            '🎟️ Amsterdam\'s Guild of Surgeons charged admission to the annual dissection AND served food and drinks. Part science lecture, part 17th century dinner theater.']},
+    {id:'laughing_cavalier',title:'The Laughing Cavalier',artist:'Frans Hals',year:'1624',
+     medium:'Oil on canvas',location:'Wallace Collection, London',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Laughing_Cavalier.jpg/600px-Laughing_Cavalier.jpg',
+     desc:'He\'s not actually laughing — it\'s a smug smirk with a raised eyebrow that feels completely modern. Frans Hals painted faster than anyone of his era, capturing personality in bold, confident strokes.',
+     std:'9.1.8.C – Artistic Techniques & Style',
+     facts:['😏 He is NOT laughing! Victorian journalists invented the nickname in the 1800s. The original Dutch title just means "cheerful man."',
+            '⚡ Hals painted with extraordinary speed and almost no corrections — what you see is basically his first pass. Other painters reworked endlessly; Hals just nailed it.',
+            '🧵 His sleeve embroidery contains hidden symbols of love: arrows, bees, flames, and winged staffs. This was almost certainly a wedding or betrothal portrait.',
+            '❓ We have absolutely no idea who this man was. He was never identified and remains anonymous forever, smirking at us across 400 years.']},
+    {id:'view_delft',title:'View of Delft',artist:'Johannes Vermeer',year:'~1660–1661',
+     medium:'Oil on canvas',location:'Mauritshuis Museum, The Hague',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Vermeer-view-of-delft.jpg/800px-Vermeer-view-of-delft.jpg',
+     desc:'A nearly photographic view of Vermeer\'s hometown reflected in perfectly still water. The novelist Marcel Proust called it "the most beautiful painting in the world" — and raced from his sickbed to see it before dying.',
+     std:'9.1.8.B – Atmospheric Perspective',
+     facts:['☁️ The sky takes up over half the canvas — an unusual choice. Dutch painters were famous worldwide for painting the most extraordinary luminous skies.',
+            '🗺️ Historians used old city maps to pinpoint Vermeer\'s exact viewpoint — a second-floor window 90 meters from the harbor. A camera obscura was almost certainly used.',
+            '📖 In Marcel Proust\'s novel, a character literally DIES staring at "a little patch of yellow wall" in this painting. That yellow wall is real — look left of center.',
+            '🧱 The brickwork is so precisely painted that historians can date exactly when specific buildings in Delft were modified or repaired.']},
+  ]},
+  {id:'japan',name:'Edo Japan\n& Ukiyo-e',emoji:'⛩️',period:'1600–1868 CE',bgClass:'wbg-japan',accent:'#F0F0F0',
+   desc:'In Japan\'s peaceful Edo period, woodblock printmakers made art affordable for everyone. "Ukiyo-e" (pictures of the floating world) sold like trading cards at market stalls.',
+   std:'PA 9.2.8.B · 9.1.8.C',
+   paintings:[
+    {id:'great_wave',title:'The Great Wave off Kanagawa',artist:'Katsushika Hokusai',year:'~1831',
+     medium:'Woodblock print (Ukiyo-e)',location:'Metropolitan Museum of Art (and multiple)',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Tsunami_by_hokusai_19th_century.jpg/1200px-Tsunami_by_hokusai_19th_century.jpg',
+     desc:'The most recognized Japanese artwork in the world. A towering wave threatens tiny fishing boats while Mount Fuji sits small and serene in the distance — from Hokusai\'s "36 Views of Mount Fuji."',
+     std:'9.2.8.B – Chronological Relationships',
+     facts:['🖨️ This is NOT a painting — it was carved into multiple woodblocks and printed! One image required 10+ separate blocks, each inked a different color.',
+            '⛵ The small boats are "oshiokuri-bune" — fast courier fishing boats. Look closely and you can see the fishermen clinging to the sides for their lives!',
+            '🗻 Mount Fuji appears tiny at center — even Japan\'s most sacred mountain is made small by nature. This was a deliberate philosophical statement.',
+            '💰 Each print originally sold for the price of a bowl of noodles. Hokusai believed great art should be affordable for working people.']},
+    {id:'red_fuji',title:'Fine Wind, Clear Morning (Red Fuji)',artist:'Katsushika Hokusai',year:'~1831',
+     medium:'Woodblock print (Ukiyo-e)',location:'Multiple museum collections',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Red_Fuji_southern_wind_clear_morning.jpg/800px-Red_Fuji_southern_wind_clear_morning.jpg',
+     desc:'Mount Fuji glows crimson in early morning light with a band of green forest at its base. The simplicity and power of this image influenced Western art enormously — including Van Gogh directly.',
+     std:'9.1.8.B – Color, Mood & Symbolism',
+     facts:['🌄 Mount Fuji only turns this specific red during late summer early mornings — Hokusai captured a rare seasonal moment most people never see in their lifetime.',
+            '✉️ Van Gogh wrote passionate letters to his brother about Hokusai\'s work. You can see the bold flat colors and thick outlines directly copied in Van Gogh\'s paintings.',
+            '🌿 The trees at the base are Japanese red pines whose upswept branches look like hundreds of fireworks exploding against the mountain slope.',
+            '🎨 The red pigment ("beni") was made from crushed safflower petals grown by Japanese farmers — creating this color was a complex craft in itself.']},
+    {id:'hiroshige_rain',title:'Sudden Shower over Shin-Ōhashi Bridge',artist:'Utagawa Hiroshige',year:'1857',
+     medium:'Woodblock print (Ukiyo-e)',location:'Multiple museum collections',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Hiroshige_Ohashi_Atake_no_Yudachi.jpg/552px-Hiroshige_Ohashi_Atake_no_Yudachi.jpg',
+     desc:'People scatter across a bridge in Edo (modern Tokyo) as sudden rain pours down in perfect diagonal lines. Van Gogh loved this so much he painted an exact oil-paint copy of it.',
+     std:'9.2.8.C – Cross-Cultural Artistic Influence',
+     facts:['🎨 Van Gogh made a nearly exact oil-paint copy of this print. You can see both versions in museums today — nearly identical except for the oil paint texture.',
+            '🌧️ The diagonal rain lines required Hiroshige to invent a new carving technique — impossibly thin parallel grooves cut perfectly straight into the woodblock.',
+            '📅 Hiroshige died the year after making this print, swept away by a cholera epidemic that hit Edo in 1858. This series was his final masterwork.',
+            '🌊 This was part of "100 Famous Views of Edo" — he completed 119 total (slightly over 100) before dying.']},
+    {id:'plum_garden',title:'Plum Estate, Kameido',artist:'Utagawa Hiroshige',year:'1857',
+     medium:'Woodblock print (Ukiyo-e)',location:'Brooklyn Museum, New York',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Brooklyn_Museum_-_Plum_Estate%2C_Kameido_%28Kameido_Umeyashiki%29_-_Utagawa_Hiroshige_-_overall.jpg/600px-Brooklyn_Museum_-_Plum_Estate%2C_Kameido_%28Kameido_Umeyashiki%29_-_Utagawa_Hiroshige_-_overall.jpg',
+     desc:'A massive dark plum tree trunk fills the foreground while tiny visitors walk below. This radical "cut-off close-up" composition directly changed Western art and photography forever.',
+     std:'9.1.8.B – Composition & Framing',
+     facts:['📸 The radical close-up composition directly inspired 19th century photographers and Western painters like Degas and Manet to break conventional framing rules.',
+            '✂️ The trunk is cut at both top and bottom. Western art showed the whole subject — Japanese aesthetics embraced the partial and suggestive.',
+            '🌸 Plum blossoms are Japan\'s first flowers of spring, blooming through snow. They symbolize resilience, hope, and beauty in difficult times.',
+            '🎌 The actual Kameido Plum Garden in Tokyo still exists today and draws thousands of visitors every February when the trees bloom.']},
+    {id:'kirifuri_waterfall',title:'Kirifuri Waterfall at Mt. Kurokami',artist:'Katsushika Hokusai',year:'~1833',
+     medium:'Woodblock print (Ukiyo-e)',location:'Multiple museum collections',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Kirifuri_Waterfall_at_Mt_Kurokami_in_Shimotsuke_Province.jpg/588px-Kirifuri_Waterfall_at_Mt_Kurokami_in_Shimotsuke_Province.jpg',
+     desc:'From Hokusai\'s "Tour of Waterfalls" series — falling water captured in pure parallel lines. The tiny human figures at the base make the waterfall feel impossibly vast.',
+     std:'9.1.8.B – Scale, Proportion & Line',
+     facts:['🌊 Hokusai made THREE different waterfall series in his career. He was utterly obsessed with depicting moving water and spent his life trying to capture it perfectly.',
+            '👴 Hokusai didn\'t begin his most famous work until his 70s. He believed he only became a truly skilled artist in old age.',
+            '✍️ Hokusai changed his artist name 30 times — each change marking a new artistic philosophy and phase. His final name period began at age 75.',
+            '💀 On his deathbed at 90, Hokusai reportedly said: "If only heaven would give me 10 more years... even 5... then I could become a real painter."']},
+    {id:'sharaku_actor',title:'Actor Ōtani Oniji III as Yakko Edobei',artist:'Tōshūsai Sharaku',year:'1794',
+     medium:'Woodblock print (Ukiyo-e)',location:'Metropolitan Museum of Art, New York',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Sharaku_Otani_Oniji3.jpg/600px-Sharaku_Otani_Oniji3.jpg',
+     desc:'An explosive close-up of a kabuki villain — hands curled in fury, face twisted in theatrical rage. Sharaku\'s portraits were so brutally honest that celebrities despised them. He worked for 10 months, then vanished.',
+     std:'9.3.8.A – Expressive Qualities',
+     facts:['👻 Sharaku worked for exactly 10 months (1794-95) then completely disappeared. Nobody knows who he was or what happened. The greatest vanishing act in art history.',
+            '😡 Kabuki actors were celebrities. They HATED Sharaku\'s portraits because he made them look ugly and intense instead of glamorous and beautiful.',
+            '🔍 Art historians have debated Sharaku\'s identity for 200+ years. Theories: a Noh theater actor, a government official, or a secret group of artists working together.',
+            '⭐ In 10 months, Sharaku produced 145 prints — almost all considered masterpieces. Then: complete silence and total disappearance.']},
+  ]},
+  {id:'egypt',name:'Ancient\nEgypt',emoji:'🏺',period:'3100–30 BCE',bgClass:'wbg-egypt',accent:'#D4A850',
+   desc:'For over 3,000 years, Egyptian artists followed strict rules about depicting the world. Their art wasn\'t meant to look "real" — it was meant to carry spiritual power across eternity.',
+   std:'PA 9.2.8.A · 9.2.8.B',
+   paintings:[
+    {id:'nefertiti',title:'Bust of Nefertiti',artist:'Thutmose (attributed)',year:'~1345 BCE',
+     medium:'Painted limestone with stucco',location:'Neues Museum, Berlin',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Nofretete_Neues_Museum.jpg/600px-Nofretete_Neues_Museum.jpg',
+     desc:'Carved 3,360+ years ago, this bust of Queen Nefertiti is considered one of the greatest masterpieces in human history. Her name means "the beautiful one has come." The blue crown was uniquely hers.',
+     std:'9.2.8.A – Historical Context of Art',
+     facts:['👁️ Her left eye is INTENTIONALLY missing! The right eye is rock crystal inlaid in wax. The left was deliberately left incomplete, possibly for spiritual reasons.',
+            '🇩🇪 The bust was smuggled out of Egypt in 1912 by a German archaeologist who labeled it "miscellaneous" on export papers. Egypt has demanded its return for over 100 years.',
+            '💄 Her thick kohl eyeliner was both cosmetic AND functional — the dark mineral pigment repelled flies and protected eyes from the harsh Egyptian sun.',
+            '🔮 Nefertiti may have briefly ruled Egypt as pharaoh herself under the name Neferneferuaten after her husband\'s death. The evidence is still actively debated.']},
+    {id:'tut_mask',title:'Death Mask of Tutankhamun',artist:'Ancient Egyptian craftsmen',year:'~1323 BCE',
+     medium:'Solid gold, lapis lazuli, carnelian, quartz, obsidian',location:'Egyptian Museum, Cairo',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/CairoEgMuseumTaaMaskOfTutankhamun.jpg/600px-CairoEgMuseumTaaMaskOfTutankhamun.jpg',
+     desc:'Made from 22 pounds of solid gold, this mask covered the boy pharaoh\'s mummified head. It shows him as Osiris, god of the afterlife, beginning his eternal journey.',
+     std:'9.1.8.A – Materials, Techniques & Processes',
+     facts:['⚖️ The mask weighs 24 pounds (11 kg) and uses TWO types of gold — harder alloy for the face, purer softer gold for the headdress cloth.',
+            '💙 The blue stripes are lapis lazuli imported from Afghanistan — over 3,000 miles away. Global trade networks existed 3,300 years ago!',
+            '😱 The "Curse of the Pharaoh" — 12 of 58 people who entered the tomb died within 12 years. Scientists now suspect ancient mold or toxic gases trapped in the sealed chamber.',
+            '🩹 The beard was accidentally knocked off by a museum worker in 2014 and hastily re-glued with the wrong adhesive. Properly restored in 2015 using micro-CT scans.']},
+    {id:'book_dead',title:'Weighing of the Heart (Book of the Dead)',artist:'Ancient Egyptian scribes',year:'~1275 BCE',
+     medium:'Painted papyrus scroll',location:'British Museum, London',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/BD_Hunefer.jpg/1024px-BD_Hunefer.jpg',
+     desc:'The soul of Hunefer arrives in the afterlife. His heart is weighed against the Feather of Truth. If lighter, he enters paradise. If heavier — the monster Ammit devours him instantly!',
+     std:'9.2.8.A – Religious & Cultural Meaning',
+     facts:['🪶 The feather belongs to Ma\'at, goddess of truth. A light heart meant you lived justly. This may be the origin of the phrase "a heart as light as a feather!"',
+            '🐊 The monster waiting to devour the unworthy heart is Ammit — part crocodile, part lion, part hippopotamus. Egypt\'s ultimate punishment.',
+            '📜 The "Book of the Dead" wasn\'t a real book — it was a custom scroll of protective spells buried with the wealthy. Poor people got shorter, cheaper versions.',
+            '🖌️ Professional scribes left blank spaces in standard scrolls to fill in the buyer\'s name. Some Egyptians were buried with scrolls that still had the name blank!']},
+    {id:'nebamun',title:'Fowling in the Marshes (Tomb of Nebamun)',artist:'Ancient Egyptian painters',year:'~1350 BCE',
+     medium:'Fresco (pigment on plaster)',location:'British Museum, London',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/0/04/Nebamun_hunting_in_the_marshes%2C_fresco_from_the_Tomb_of_Nebamun.jpg',
+     desc:'Nebamun hunts birds with his family and cat in the Nile marshes. Egyptian art shows multiple viewpoints at once — face from front, body from side. This wasn\'t a mistake: it was the sacred rule.',
+     std:'9.1.8.B – Perspective & Artistic Convention',
+     facts:['🐱 The cat is actively HUNTING birds alongside the family — cats were sacred but also hardworking hunting companions in ancient Egypt.',
+            '👁️ The rule: show the eye from the front, head from the side, shoulders from the front, legs from the side — all at once in one figure. Breaking this was very rare.',
+            '🌊 Every fish, bird, and plant is painted with extreme detail — ensuring Nebamun\'s spirit would have a bountiful afterlife in these marshes forever.',
+            '🔍 The tomb was discovered around 1820 but its location was never properly recorded. Where exactly is the Tomb of Nebamun? Still unknown.']},
+    {id:'seated_scribe',title:'The Seated Scribe',artist:'Ancient Egyptian sculptor',year:'~2500–2350 BCE',
+     medium:'Painted limestone',location:'Louvre Museum, Paris',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Egypte_louvre_058.jpg/453px-Egypte_louvre_058.jpg',
+     desc:'A scribe sits cross-legged, papyrus ready, eyes alert and waiting for dictation. His inlaid eyes are so lifelike that the workmen who uncovered him reportedly fled the excavation site in terror.',
+     std:'9.1.8.A – Sculptural Techniques',
+     facts:['😱 When uncovered in 1850, the Egyptian excavation workers were so startled by his hyper-realistic inlaid eyes that they reportedly dropped everything and ran away!',
+            '👁️ His eyes are rock crystal set in copper-lined bronze, with red-veined white shell for the whites. The effect creates an almost supernatural, living alertness.',
+            '📝 Scribes were among the most powerful people in Egypt — fewer than 1% could read and write. They controlled ALL records, contracts, and official communications.',
+            '❓ Nobody knows who he was. Found without a name inscription. Known only as "the scribe" — anonymous, perfect, and staring at visitors for 4,500 years.']},
+    {id:'great_sphinx',title:'The Great Sphinx of Giza',artist:'Ancient Egyptian builders',year:'~2500 BCE',
+     medium:'Carved limestone bedrock (monolithic)',location:'Giza Plateau, Egypt',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Great_Sphinx_of_Giza_-_20080716a.jpg/1200px-Great_Sphinx_of_Giza_-_20080716a.jpg',
+     desc:'The world\'s largest monolithic statue — carved directly from the living bedrock of Giza. At 240 feet long and 66 feet tall, it was originally painted in vivid colors, not the sandy stone we see today.',
+     std:'9.2.8.A – Monumental Art & Its Purpose',
+     facts:['🎨 The Sphinx was originally painted: bright red face, yellow and blue striped headdress. Ancient Egyptian monuments were colorful — not bare stone.',
+            '👃 Napoleon\'s soldiers did NOT shoot off the nose! Drawings from 1737 — decades before Napoleon — already show it missing. A medieval Islamic scholar is the probable cause.',
+            '🌊 Some geologists point to erosion patterns suggesting the Sphinx might be FAR older than 4,500 years — possibly 10,000+ years old, from a wetter era in Egypt\'s past.',
+            '🏛️ The Sphinx has been buried in sand for most of its existence. The Ancient Egyptians themselves excavated it multiple times — there are hieroglyphs describing the dig!']},
+  ]},
+  {id:'harlem',name:'Harlem\nRenaissance',emoji:'🎷',period:'1920–1940 CE',bgClass:'wbg-harlem',accent:'#F0A500',
+   desc:'After the Great Migration, Black artists transformed New York\'s Harlem into the cultural capital of a new African American identity. Art became a declaration of dignity, pride, and full humanity.',
+   std:'PA 9.2.8.C · 9.3.8.B',
+   paintings:[
+    {id:'banjo_lesson',title:'The Banjo Lesson',artist:'Henry Ossawa Tanner',year:'1893',
+     medium:'Oil on canvas',location:'Hampton University Museum, Virginia',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Henry_Ossawa_Tanner_-_The_Banjo_Lesson.jpg/609px-Henry_Ossawa_Tanner_-_The_Banjo_Lesson.jpg',
+     desc:'A grandfather tenderly teaches his grandson to play banjo in warm, glowing light. Tanner painted Black subjects with dignity and love at a time when most art depicted Black Americans as stereotypes or caricatures.',
+     std:'9.2.8.C – Art as Social Commentary',
+     facts:['🎭 Most paintings of Black Americans in the 1890s were stereotyped or mocking. Tanner\'s response was to paint the most intimate, dignified scenes of family love he could find.',
+            '🌍 Tanner eventually moved to Paris, where he found racial respect he couldn\'t find in America. He became the first African American artist to achieve major international recognition.',
+            '🏆 Hampton Institute (now Hampton University), a historically Black college, purchased this painting to hang as inspiration for its students.',
+            '📸 Tanner was one of the first painters to use photography for pose reference — making his figures unusually natural and lifelike for the era.']},
+    {id:'annunciation',title:'The Annunciation',artist:'Henry Ossawa Tanner',year:'1898',
+     medium:'Oil on canvas',location:'Philadelphia Museum of Art, Pennsylvania',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Henry_Ossawa_Tanner_-_The_Annunciation.jpg/800px-Henry_Ossawa_Tanner_-_The_Annunciation.jpg',
+     desc:'Mary sits in a simple Middle Eastern room as an angel appears — shown not as a winged figure but as a column of flowing golden light. Tanner made biblical figures look like real people from the actual Middle East.',
+     std:'9.1.8.B – Light as Artistic Subject',
+     facts:['💡 The angel appears as pure flowing light — no wings, no human form, no halo. Completely radical departure from 500 years of Western religious art.',
+            '🌍 Tanner painted Mary as an authentic young Middle Eastern woman, not the idealized blonde European figure standard in Western religious painting.',
+            '🏆 Won the third-place medal at the Paris Salon of 1898 — making Tanner the first African American to win a major European art prize.',
+            '✈️ Tanner traveled specifically to Palestine to study authentic architecture, people, and costumes for his religious paintings. No other Western artist of his era did this.']},
+    {id:'ethiopia_awakening',title:'Ethiopia Awakening',artist:'Meta Vaux Warrick Fuller',year:'1914',
+     medium:'Bronze sculpture',location:'Schomburg Center for Research in Black Culture, New York',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Meta_Fuller_Ethiopia.jpg/400px-Meta_Fuller_Ethiopia.jpg',
+     desc:'A figure wrapped in Egyptian mummy bandages turns her head and begins to awaken. Created in 1914 — before the Harlem Renaissance was named — this bronze predicted all of its themes: African heritage, awakening, and cultural rebirth.',
+     std:'9.3.8.B – Symbolism & Meaning in Art',
+     facts:['🔮 Fuller created this sculpture 6 years before the Harlem Renaissance began. She predicted the movement\'s core themes before there was a movement to belong to.',
+            '🌍 Fuller was the first American sculptor to directly address African heritage and Black history as art subjects. She studied in Paris under Auguste Rodin himself.',
+            '🔥 A warehouse fire destroyed most of Fuller\'s life\'s work. "Ethiopia Awakening" was one of the few surviving pieces. What was lost may have been extraordinary.',
+            '✊ The wrapped bandages symbolize centuries of oppression — the turning head is the first movement of waking up and becoming fully aware of your own power.']},
+    {id:'midsummer_harlem',title:'Midsummer Night in Harlem',artist:'Palmer Hayden',year:'1936',
+     medium:'Oil on canvas',location:'Museum of African American Art, Los Angeles',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/Hayden%2C_Palmer_-_Midsummer_Night_in_Harlem_-_1936.jpg/800px-Hayden%2C_Palmer_-_Midsummer_Night_in_Harlem_-_1936.jpg',
+     desc:'Harlem neighbors gather on stoops and fire escapes on a warm summer night. Hayden celebrated authentic everyday Black community life with vibrant color and joy — rejecting both idealization and caricature.',
+     std:'9.2.8.C – Community & Identity in Art',
+     facts:['🏘️ "Sitting on the stoop" was a genuine Harlem social institution — before air conditioning, everyone came outside on hot nights to talk, sing, and be neighbors.',
+            '🎨 Hayden was criticized by some Black intellectuals who found his folksy style undignified, and praised by others for showing authentic community life without apology.',
+            '✉️ Hayden worked as a postal worker and janitor, saving money for years to study art in Paris. He painted at night after his day job.',
+            '🌃 The warm glowing street lamps and figures spilling from every window capture exactly why 1920s-30s Harlem was called "the Negro Capital of the World."']},
+    {id:'forever_free',title:'Forever Free',artist:'Edmonia Lewis',year:'1867',
+     medium:'White marble sculpture',location:'Howard University Gallery of Art, Washington D.C.',source:'Wikimedia Commons (Public Domain)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Forever_Free_by_Edmonia_Lewis%2C_Howard_University_Gallery_of_Art.jpg/519px-Forever_Free_by_Edmonia_Lewis%2C_Howard_University_Gallery_of_Art.jpg',
+     desc:'Two years after slavery ended, this sculpture shows a man and woman breaking free from their chains, arms raised. Lewis — of Black and Ojibwe heritage — carved it in Rome and sent it as a gift to abolitionists in Boston.',
+     std:'9.2.8.C – Art as Historical Document',
+     facts:['⛓️ Lewis finished this just two years after the 13th Amendment abolished slavery. It may be the very first major work of art to directly celebrate emancipation.',
+            '🌍 Lewis carved this in Rome because European art circles accepted her as a sculptor — something impossible in 1867 racist America.',
+            '✊ Lewis was of mixed African American and Ojibwe Native American heritage. She made artwork honoring both heritages throughout her career.',
+            '🎉 Lewis arranged for the finished sculpture to be shipped secretly to Boston. The unveiling was a major event attended by abolitionists and formerly enslaved people.']},
+    {id:'jitterbugs',title:'Jitterbugs III',artist:'William H. Johnson',year:'~1941',
+     medium:'Oil on plywood',location:'Smithsonian American Art Museum, Washington D.C.',source:'Smithsonian Open Access (CC0)',
+     url:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/William_H._Johnson_-_Jitterbugs_III_-_1967.59.886_-_Smithsonian_American_Art_Museum.jpg/631px-William_H._Johnson_-_Jitterbugs_III_-_1967.59.886_-_Smithsonian_American_Art_Museum.jpg',
+     desc:'Dancers explode with energy in flat, bold colors and thick black outlines. Johnson blended Harlem street life with European Expressionism to create a uniquely African American visual language.',
+     std:'9.1.8.B – Expressionist Style & Technique',
+     facts:['🎷 The Jitterbug was a wildly athletic swing dance born in Harlem\'s Savoy Ballroom — where Black and white dancers mixed despite legal segregation throughout America.',
+            '🌍 Johnson grew up in poverty in South Carolina, became celebrated in Europe, then returned to Harlem where he developed this bold "folk art" style as a deliberate artistic choice.',
+            '😢 Johnson spent the last 23 years of his life in a mental institution. When he died, his estate of 1,000+ artworks was donated to the Smithsonian.',
+            '🎨 Johnson\'s "simple" style was sophisticated — honoring African art traditions and folk culture the same way Picasso honored African masks in Cubism.']},
+  ]},
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let S = {
+  screen:'title', mapSel:0, curWorld:null, worldSel:0,
+  paintingOpen:false, teacherOpen:false, teacherUnlocked:false,
+  pin:'art1234', uploadedImg:null, discovered:{}
+};
+
+// ============================================================
+// UTILS
+// ============================================================
+const byId = id => document.getElementById(id);
+const worldById = id => GAME_DATA.find(w=>w.id===id);
+const totalP = () => GAME_DATA.reduce((a,w)=>a+w.paintings.length,0);
+const totalDisc = () => Object.keys(S.discovered).length;
+const isDisc = (wid,pid) => !!S.discovered[wid+'_'+pid];
+const markDisc = (wid,pid) => { S.discovered[wid+'_'+pid]=true; saveS(); };
+const worldDisc = wid => { const w=worldById(wid); return w?w.paintings.filter(p=>isDisc(wid,p.id)).length:0; };
+
+function saveS(){
+  try{
+    localStorage.setItem('aat_disc',JSON.stringify(S.discovered));
+    localStorage.setItem('aat_pin',S.pin);
+  }catch(e){}
+}
+function loadS(){
+  try{
+    const d=localStorage.getItem('aat_disc'); if(d) S.discovered=JSON.parse(d);
+    const p=localStorage.getItem('aat_pin'); if(p) S.pin=p;
+  }catch(e){}
+}
+
+// ============================================================
+// TITLE
+// ============================================================
+function buildStars(){
+  const c=byId('tstars');
+  for(let i=0;i<55;i++){
+    const s=document.createElement('div');
+    s.className='tstar';
+    s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${Math.random()*3}s;animation-duration:${1.5+Math.random()*2.5}s;opacity:${0.2+Math.random()*.8}`;
+    c.appendChild(s);
+  }
+}
+
+// ============================================================
+// SCREEN MANAGER
+// ============================================================
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  byId('screen-'+name).classList.add('active');
+  S.screen=name;
+}
+
+function startGame(){
+  buildMapGrid();
+  showScreen('map');
+  setTimeout(()=>focusMap(S.mapSel),80);
+}
+
+// ============================================================
+// WORLD MAP
+// ============================================================
+function buildMapGrid(){
+  const g=byId('mgrid'); g.innerHTML='';
+  GAME_DATA.forEach((w,i)=>{
+    const disc=worldDisc(w.id);
+    const c=document.createElement('div');
+    c.className=`wcard w${w.id.slice(0,1)}${['f','p','d','j','e','h'][i]}`;
+    c.setAttribute('tabindex','0');
+    c.setAttribute('role','button');
+    c.setAttribute('aria-label',`${w.name.replace('\n',' ')}, ${w.period}, ${disc} of ${w.paintings.length} discovered`);
+    c.dataset.i=i;
+    if(i===S.mapSel) c.classList.add('sel');
+    c.innerHTML=`<div class="wcard-em" style="animation-delay:${i*.2}s">${w.emoji}</div>
+      <div class="wcard-nm">${w.name}</div>
+      <div class="wcard-pr">${w.period}</div>
+      <div class="wcard-pg">${disc} / ${w.paintings.length} 🎨</div>`;
+    c.onclick=()=>{S.mapSel=i;enterWorld(w.id)};
+    c.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();S.mapSel=i;enterWorld(w.id)} };
+    g.appendChild(c);
+  });
+  byId('map-prog').textContent=`Discovered: ${totalDisc()} / ${totalP()}`;
+}
+
+function focusMap(i){
+  const cards=document.querySelectorAll('.wcard');
+  cards.forEach((c,j)=>c.classList.toggle('sel',j===i));
+  if(cards[i]) cards[i].focus();
+}
+
+function mapNav(dir){
+  const cols=window.innerWidth>680?3:2;
+  const n=GAME_DATA.length;
+  let nx=S.mapSel;
+  if(dir==='right') nx=(nx+1)%n;
+  else if(dir==='left') nx=(nx-1+n)%n;
+  else if(dir==='down') nx=Math.min(n-1,nx+cols);
+  else if(dir==='up') nx=Math.max(0,nx-cols);
+  S.mapSel=nx; focusMap(nx);
+}
+
+// ============================================================
+// WORLD VIEW
+// ============================================================
+function enterWorld(wid){
+  const w=worldById(wid); if(!w) return;
+  S.curWorld=wid; S.worldSel=0;
+  const el=byId('screen-world');
+  el.style.setProperty('--wa',w.accent);
+  el.className=`screen scanlines ${w.bgClass}`;
+  byId('w-em').textContent=w.emoji;
+  byId('w-nm').textContent=w.name.replace('\n',' ');
+  byId('w-pd').textContent=w.period;
+  byId('w-desc').textContent=w.desc;
+  byId('w-std').textContent=w.std;
+  buildPGrid(w);
+  showScreen('world');
+  setTimeout(()=>focusP(0),80);
+}
+
+function buildPGrid(w){
+  const g=byId('pgrid'); g.innerHTML='';
+  w.paintings.forEach((p,i)=>{
+    const disc=isDisc(w.id,p.id);
+    const f=document.createElement('div');
+    f.className=`pframe${i===S.worldSel?' sel':''}`;
+    f.setAttribute('tabindex','0');
+    f.setAttribute('role','button');
+    f.setAttribute('aria-label',`${p.title} by ${p.artist}${disc?' (discovered)':''}`);
+    f.dataset.i=i;
+    f.innerHTML=`
+      <img src="${p.url}" alt="${p.title}" loading="lazy" onerror="this.parentElement.replaceChild(Object.assign(document.createElement('div'),{className:'pimg-ph',innerHTML:'<span>🖼️</span><span>Image unavailable<br>Use Teacher Panel<br>to set URL</span>'}),this)">
+      <div class="pframe-lbl">
+        <div class="pframe-ttl">${p.title}</div>
+        <div class="pframe-art">${p.artist}</div>
+      </div>
+      ${disc?'<div class="disc-badge">✓ SEEN</div>':''}`;
+    f.onclick=()=>{S.worldSel=i;openPainting(wid||w.id,i)};
+    f.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();S.worldSel=i;openPainting(S.curWorld,i)} };
+    g.appendChild(f);
+  });
+  updateWorldProgress(w);
+}
+
+function focusP(i){
+  const frames=document.querySelectorAll('.pframe');
+  frames.forEach((f,j)=>f.classList.toggle('sel',j===i));
+  if(frames[i]) frames[i].focus();
+}
+
+function worldNav(delta){
+  const w=worldById(S.curWorld); if(!w) return;
+  let nx=S.worldSel+delta;
+  if(nx<0) nx=w.paintings.length-1;
+  if(nx>=w.paintings.length) nx=0;
+  S.worldSel=nx; focusP(nx);
+}
+
+function updateWorldProgress(w){
+  const disc=worldDisc(w.id);
+  byId('w-pg').textContent=`${disc} / ${w.paintings.length}`;
+}
+
+function goToMap(){
+  buildMapGrid();
+  showScreen('map');
+  setTimeout(()=>focusMap(S.mapSel),80);
+}
+
+// ============================================================
+// PAINTING MODAL
+// ============================================================
+function openPainting(wid, idx){
+  const w=worldById(wid); if(!w) return;
+  if(idx<0) idx=0;
+  if(idx>=w.paintings.length) idx=w.paintings.length-1;
+  S.worldSel=idx;
+  markDisc(wid, w.paintings[idx].id);
+  renderPainting(wid, idx);
+  byId('pmodal').classList.add('active');
+  S.paintingOpen=true;
+  // Refresh world grid to show discovery badge
+  buildPGrid(w);
+  updateWorldProgress(w);
+  // Focus close button
+  setTimeout(()=>{ const b=byId('pmodal').querySelector('.closebtn'); if(b) b.focus(); },100);
+}
+
+function renderPainting(wid, idx){
+  const w=worldById(wid);
+  const p=w.paintings[idx];
+  byId('pm-ctr').textContent=`${idx+1} / ${w.paintings.length}`;
+  byId('pm-src').textContent=`Source: ${p.source||''}`;
+  // Image
+  const imgP=byId('pm-img');
+  imgP.innerHTML=`<img src="${p.url}" alt="${p.title}" onerror="this.parentElement.innerHTML='<div class=pm-imgph><div class=ico>🖼️</div><div class=msg>Image unavailable<br>Use Teacher Panel to set URL</div></div>'">
+    <div class="pm-src">${p.source||''}</div>`;
+  // Info
+  byId('pm-info').innerHTML=`
+    <div class="pm-ttl">${p.title}</div>
+    <div class="pm-art">${p.artist}</div>
+    <div class="pm-meta">
+      <span class="mchip">📅 ${p.year||''}</span>
+      ${p.medium?`<span class="mchip">🖌️ ${p.medium}</span>`:''}
+      ${p.location?`<span class="mchip">📍 ${p.location}</span>`:''}
+    </div>
+    <div class="pm-desc">${p.desc||''}</div>
+    <div class="facts-hdr">⭐ FASCINATING FACTS</div>
+    ${(p.facts||[]).map(f=>`<div class="fact">${f}</div>`).join('')}
+    ${p.std?`<div class="pa-badge">🏫 PA Standard: ${p.std}</div>`:''}
+  `;
+}
+
+function navPainting(dir){
+  const w=worldById(S.curWorld); if(!w) return;
+  let nx=S.worldSel+dir;
+  if(nx<0) nx=w.paintings.length-1;
+  if(nx>=w.paintings.length) nx=0;
+  S.worldSel=nx;
+  markDisc(S.curWorld, w.paintings[nx].id);
+  renderPainting(S.curWorld, nx);
+  buildPGrid(w);
+  updateWorldProgress(w);
+}
+
+function closePainting(){
+  byId('pmodal').classList.remove('active');
+  S.paintingOpen=false;
+  setTimeout(()=>focusP(S.worldSel),80);
+}
+
+// ============================================================
+// TEACHER PANEL
+// ============================================================
+function openTeacher(){
+  byId('tmodal').classList.add('active');
+  S.teacherOpen=true;
+  if(!S.teacherUnlocked){
+    byId('tlogin').style.display='flex';
+    byId('tmain').style.display='none';
+    setTimeout(()=>byId('tpin').focus(),100);
+  } else {
+    showTeacherMain();
+  }
+}
+
+function closeTeacher(){
+  byId('tmodal').classList.remove('active');
+  S.teacherOpen=false;
+}
+
+function verifyPin(){
+  const v=byId('tpin').value;
+  if(v===S.pin){
+    S.teacherUnlocked=true;
+    showTeacherMain();
+  } else {
+    byId('tpin-msg').innerHTML='<div class="stmsg err">✕ Incorrect PIN</div>';
+    byId('tpin').value='';
+    byId('tpin').focus();
+  }
+}
+
+function showTeacherMain(){
+  byId('tlogin').style.display='none';
+  byId('tmain').style.display='block';
+  populateSelects();
+  renderManage();
+  byId('exp-ct').textContent=GAME_DATA.reduce((a,w)=>a+w.paintings.length,0);
+}
+
+function switchTab(name){
+  document.querySelectorAll('.ttab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.tpanel').forEach(p=>p.classList.remove('on'));
+  byId('tab-'+name).classList.add('on');
+  byId('tpanel-'+name).classList.add('on');
+  if(name==='manage') renderManage();
+  if(name==='import'||name==='settings') byId('exp-ct').textContent=GAME_DATA.reduce((a,w)=>a+w.paintings.length,0);
+}
+
+function populateSelects(){
+  ['f-world','filter-world'].forEach(id=>{
+    const sel=byId(id); if(!sel) return;
+    sel.innerHTML=id==='filter-world'?'<option value="">ALL WORLDS</option>':'<option value="">-- SELECT WORLD --</option>';
+    GAME_DATA.forEach(w=>{ const o=document.createElement('option'); o.value=w.id; o.textContent=w.name.replace('\n',' '); sel.appendChild(o); });
+  });
+}
+
+function addArt(){
+  const wid=byId('f-world').value;
+  const title=byId('f-title').value.trim();
+  const artist=byId('f-artist').value.trim();
+  if(!wid||!title||!artist){ showMsg('add-msg','err','✕ World, Title, and Artist are required.'); return; }
+  const w=worldById(wid); if(!w){ showMsg('add-msg','err','✕ World not found.'); return; }
+  const url=S.uploadedImg||byId('f-url').value.trim();
+  const factsRaw=byId('f-facts').value.trim();
+  const facts=factsRaw?factsRaw.split('\n').map(f=>f.trim()).filter(f=>f):[];
+  const p={
+    id:'custom_'+Date.now(),
+    title,artist,
+    year:byId('f-year').value.trim()||'Unknown',
+    medium:byId('f-medium').value.trim(),
+    location:byId('f-location').value.trim(),
+    source:byId('f-source').value.trim()||'Teacher Added',
+    url,
+    desc:byId('f-desc').value.trim(),
+    std:byId('f-standard').value.trim(),
+    facts
+  };
+  w.paintings.push(p);
+  showMsg('add-msg','ok',`✓ "${title}" added to ${w.name.replace('\n',' ')}!`);
+  clearForm();
+  byId('exp-ct').textContent=GAME_DATA.reduce((a,w)=>a+w.paintings.length,0);
+}
+
+function clearForm(){
+  ['f-world','f-title','f-artist','f-year','f-url','f-medium','f-location','f-source','f-desc','f-standard','f-facts'].forEach(id=>{
+    const el=byId(id); if(el) el.value='';
+  });
+  S.uploadedImg=null;
+  byId('up-preview').textContent='';
+}
+
+function loadFile(input){
+  const file=input.files[0]; if(!file) return;
+  if(file.size>5*1024*1024){ showMsg('add-msg','err','✕ File too large (max 5MB). Use a URL instead.'); return; }
+  const r=new FileReader();
+  r.onload=e=>{ S.uploadedImg=e.target.result; byId('up-preview').textContent=`✓ ${file.name} loaded`; };
+  r.readAsDataURL(file);
+}
+
+function dropFile(e){
+  e.preventDefault();
+  const f=e.dataTransfer.files[0]; if(!f) return;
+  byId('f-file').files=e.dataTransfer.files;
+  loadFile(byId('f-file'));
+}
+
+function renderManage(){
+  const filterWid=byId('filter-world').value;
+  const list=byId('tlist'); list.innerHTML='';
+  let count=0;
+  GAME_DATA.forEach(w=>{
+    if(filterWid&&w.id!==filterWid) return;
+    w.paintings.forEach((p,i)=>{
+      count++;
+      const item=document.createElement('div');
+      item.className='titem';
+      item.innerHTML=`<span class="ittl">${p.title}</span>
+        <span class="iwld">${w.name.replace('\n',' ')}</span>
+        <button class="pxbtn red sm" onclick="deletePainting('${w.id}','${p.id}')" style="margin-left:4px">🗑</button>`;
+      list.appendChild(item);
+    });
+  });
+  byId('manage-ct').textContent=`${count} artworks`;
+}
+
+function deletePainting(wid, pid){
+  if(!confirm(`Delete this painting from the game?`)) return;
+  const w=worldById(wid); if(!w) return;
+  w.paintings=w.paintings.filter(p=>p.id!==pid);
+  renderManage();
+}
+
+function doImport(){
+  const raw=byId('f-json').value.trim();
+  try{
+    const arr=JSON.parse(raw);
+    if(!Array.isArray(arr)) throw new Error('Expected array');
+    let added=0;
+    arr.forEach(p=>{
+      if(!p.worldId||!p.title||!p.artist) return;
+      const w=worldById(p.worldId); if(!w) return;
+      w.paintings.push({
+        id:'import_'+Date.now()+'_'+Math.random().toString(36).slice(2),
+        title:p.title||'Untitled', artist:p.artist||'Unknown',
+        year:p.year||'', medium:p.medium||'', location:p.location||'',
+        source:p.source||'Imported', url:p.url||'', desc:p.description||p.desc||'',
+        std:p.paStandard||p.std||'', facts:Array.isArray(p.facts)?p.facts:[]
+      });
+      added++;
+    });
+    showMsg('import-msg','ok',`✓ Imported ${added} artworks successfully!`);
+    renderManage();
+  }catch(err){
+    showMsg('import-msg','err',`✕ JSON parse error: ${err.message}`);
+  }
+}
+
+function doExportJSON(){
+  const data=GAME_DATA.map(w=>w.paintings.map(p=>({...p,worldId:w.id}))).flat();
+  downloadFile(JSON.stringify(data,null,2),'art-across-time-data.json','application/json');
+  showMsg('import-msg','ok','✓ JSON file downloaded!');
+}
+
+function exportGame(){
+  const title=byId('exp-title').value||'Art Across Time';
+  const newPin=byId('exp-pin').value||S.pin;
+  let html=document.documentElement.outerHTML;
+  // Replace game data
+  const dataStr=JSON.stringify(GAME_DATA);
+  html=html.replace(/let GAME_DATA = \[[\s\S]*?\];(\s*\/\/ ={10,})/, `let GAME_DATA = ${dataStr};\n// $1`);
+  // Replace pin
+  html=html.replace(/pin:'[^']*'/, `pin:'${newPin}'`);
+  // Replace title
+  html=html.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`);
+  downloadFile(html, title.toLowerCase().replace(/\s+/g,'-')+'.html','text/html');
+  showMsg('import-msg','ok','✓ Standalone HTML game downloaded!');
+}
+
+function exportDataFile(){
+  doExportJSON();
+}
+
+function changePin(){
+  const n=byId('new-pin').value;
+  const n2=byId('new-pin2').value;
+  if(!n||n.length<4){ showMsg('pin-msg','err','✕ PIN must be at least 4 characters.'); return; }
+  if(n!==n2){ showMsg('pin-msg','err','✕ PINs do not match.'); return; }
+  S.pin=n; saveS();
+  showMsg('pin-msg','ok','✓ PIN updated successfully!');
+  byId('new-pin').value=''; byId('new-pin2').value='';
+}
+
+function resetProgress(){
+  if(!confirm('Reset ALL student progress? This cannot be undone.')) return;
+  S.discovered={};
+  saveS();
+  buildMapGrid();
+  showMsg('pin-msg','ok','✓ Progress reset!');
+}
+
+function showMsg(id, type, text){
+  const el=byId(id); if(!el) return;
+  el.innerHTML=`<div class="stmsg ${type}">${text}</div>`;
+  setTimeout(()=>{ if(el) el.innerHTML=''; },4000);
+}
+
+function downloadFile(content, filename, mime){
+  const blob=new Blob([content],{type:mime});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+
+// ============================================================
+// KEYBOARD NAVIGATION
+// ============================================================
+document.addEventListener('keydown', e => {
+  // Global: teacher shortcut
+  if((e.ctrlKey||e.metaKey) && e.key==='t'){ e.preventDefault(); openTeacher(); return; }
+  // Modal trap
+  if(S.teacherOpen) return;
+  if(S.paintingOpen){
+    if(e.key==='Escape'){ e.preventDefault(); closePainting(); }
+    else if(e.key==='ArrowRight'||e.key==='ArrowDown'){ e.preventDefault(); navPainting(1); }
+    else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){ e.preventDefault(); navPainting(-1); }
+    else if(e.key===' '){ e.preventDefault(); navPainting(1); }
+    return;
+  }
+  if(S.screen==='title'){
+    if(e.key==='Enter'||e.key===' '){ e.preventDefault(); startGame(); }
+  } else if(S.screen==='map'){
+    if(e.key==='ArrowRight'){ e.preventDefault(); mapNav('right'); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); mapNav('left'); }
+    else if(e.key==='ArrowDown'){ e.preventDefault(); mapNav('down'); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); mapNav('up'); }
+    else if(e.key==='Enter'||e.key===' '){ e.preventDefault(); enterWorld(GAME_DATA[S.mapSel].id); }
+    else if(e.key==='Escape'){ showScreen('title'); }
+  } else if(S.screen==='world'){
+    if(e.key==='ArrowRight'){ e.preventDefault(); worldNav(1); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); worldNav(-1); }
+    else if(e.key==='ArrowDown'){ e.preventDefault(); worldNav(3); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); worldNav(-3); }
+    else if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openPainting(S.curWorld,S.worldSel); }
+    else if(e.key==='Escape'){ goToMap(); }
+  }
+});
+
+// ============================================================
+// INIT
+// ============================================================
+loadS();
+buildStars();
+// Assign world card CSS class colors properly
+const wClasses=['wf','wp','wd','wj','we','wh'];
+</script>
+</body>
+</html>
